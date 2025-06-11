@@ -261,3 +261,25 @@ class Obsidian():
             return response.json()
 
         return self._safe_call(call_fn)
+    
+    def open_file(self, filepath: str, new_leaf: bool = False) -> Any:
+        """Open a file in the Obsidian UI.
+        
+        Args:
+            filepath: Path to the file to open (relative to vault root)
+            new_leaf: Whether to open in a new tab/leaf (default: False)
+            
+        Returns:
+            None on success
+        """
+        url = f"{self.get_base_url()}/open/{filepath}"
+        params = {}
+        if new_leaf:
+            params['newLeaf'] = new_leaf
+        
+        def call_fn():
+            response = requests.post(url, headers=self._get_headers(), params=params, verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return None
+            
+        return self._safe_call(call_fn)

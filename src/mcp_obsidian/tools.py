@@ -553,3 +553,45 @@ class RecentChangesToolHandler(ToolHandler):
                 text=json.dumps(results, indent=2)
             )
         ]
+
+class OpenFileToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_open_file")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Open a file in the Obsidian user interface. This will switch focus to Obsidian and open the specified file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the file to open (relative to vault root)",
+                        "format": "path"
+                    },
+                    "new_leaf": {
+                        "type": "boolean",
+                        "description": "Whether to open the file in a new tab/leaf (default: false)",
+                        "default": False
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument missing in arguments")
+
+        new_leaf = args.get("new_leaf", False)
+        
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api.open_file(args["filepath"], new_leaf)
+
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully opened {args['filepath']} in Obsidian UI"
+            )
+        ]
