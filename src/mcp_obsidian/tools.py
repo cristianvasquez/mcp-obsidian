@@ -7,10 +7,23 @@ from mcp.types import (
 )
 import json
 import os
+from urllib.parse import urlparse
 from . import obsidian
 
 api_key = os.getenv("OBSIDIAN_API_KEY", "")
-obsidian_host = os.getenv("OBSIDIAN_HOST", "127.0.0.1")
+obsidian_host_env = os.getenv("OBSIDIAN_HOST", "127.0.0.1")
+
+# Parse the OBSIDIAN_HOST URL to extract components
+if obsidian_host_env.startswith(('http://', 'https://')):
+    parsed_url = urlparse(obsidian_host_env)
+    obsidian_protocol = parsed_url.scheme
+    obsidian_host = parsed_url.hostname or "127.0.0.1"
+    obsidian_port = parsed_url.port or (27124 if parsed_url.scheme == 'https' else 27123)
+else:
+    # Fallback for plain host format
+    obsidian_protocol = 'https'
+    obsidian_host = obsidian_host_env
+    obsidian_port = 27124
 
 if api_key == "":
     raise ValueError(f"OBSIDIAN_API_KEY environment variable required. Working directory: {os.getcwd()}")
@@ -44,7 +57,7 @@ class ListFilesInVaultToolHandler(ToolHandler):
         )
 
     def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
 
         files = api.list_files_in_vault()
 
