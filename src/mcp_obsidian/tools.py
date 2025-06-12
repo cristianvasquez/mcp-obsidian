@@ -93,7 +93,7 @@ class ListFilesInDirToolHandler(ToolHandler):
         if "dirpath" not in args:
             raise RuntimeError("dirpath argument missing in arguments")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
 
         files = api.list_files_in_dir(args["dirpath"])
 
@@ -129,7 +129,7 @@ class GetFileContentsToolHandler(ToolHandler):
         if "filepath" not in args:
             raise RuntimeError("filepath argument missing in arguments")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
 
         content = api.get_file_contents(args["filepath"])
 
@@ -172,7 +172,7 @@ class SearchToolHandler(ToolHandler):
 
         context_length = args.get("context_length", 100)
         
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         results = api.search(args["query"], context_length)
         
         formatted_results = []
@@ -410,7 +410,7 @@ class BatchGetFileContentsToolHandler(ToolHandler):
         if "filepaths" not in args:
             raise RuntimeError("filepaths argument missing in arguments")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         content = api.get_batch_file_contents(args["filepaths"])
 
         return [
@@ -450,7 +450,7 @@ class PeriodicNotesToolHandler(ToolHandler):
         if period not in valid_periods:
             raise RuntimeError(f"Invalid period: {period}. Must be one of: {', '.join(valid_periods)}")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         content = api.get_periodic_note(period)
 
         return [
@@ -510,7 +510,7 @@ class RecentPeriodicNotesToolHandler(ToolHandler):
         if not isinstance(include_content, bool):
             raise RuntimeError(f"Invalid include_content: {include_content}. Must be a boolean")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         results = api.get_recent_periodic_notes(period, limit, include_content)
 
         return [
@@ -557,7 +557,7 @@ class RecentChangesToolHandler(ToolHandler):
         if not isinstance(days, int) or days < 1:
             raise RuntimeError(f"Invalid days: {days}. Must be a positive integer")
 
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         results = api.get_recent_changes(limit, days)
 
         return [
@@ -599,12 +599,102 @@ class OpenFileToolHandler(ToolHandler):
 
         new_leaf = args.get("new_leaf", False)
         
-        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
         api.open_file(args["filepath"], new_leaf)
 
         return [
             TextContent(
                 type="text",
                 text=f"Successfully opened {args['filepath']} in Obsidian UI"
+            )
+        ]
+
+TOOL_LIST_COMMANDS = "obsidian_list_commands"
+TOOL_EXECUTE_COMMAND = "obsidian_execute_command"
+TOOL_GET_ACTIVE_NOTE = "obsidian_get_active_note"
+
+class ListCommandsToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__(TOOL_LIST_COMMANDS)
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get a list of all available commands in Obsidian that can be executed via the API",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
+        result = api.list_commands()
+        
+        return [
+            TextContent(
+                type="text", 
+                text=json.dumps(result, indent=2)
+            )
+        ]
+
+class ExecuteCommandToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__(TOOL_EXECUTE_COMMAND)
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Execute a specific Obsidian command by its ID. Use list_commands to see available commands.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "command_id": {
+                        "type": "string",
+                        "description": "The ID of the command to execute (e.g., 'global-search:open', 'graph:open')"
+                    }
+                },
+                "required": ["command_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "command_id" not in args:
+            raise RuntimeError("command_id argument missing in arguments")
+        
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
+        api.execute_command(args["command_id"])
+        
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully executed command: {args['command_id']}"
+            )
+        ]
+
+class GetActiveNoteToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__(TOOL_GET_ACTIVE_NOTE)
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get information about the currently active note in Obsidian",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        api = obsidian.Obsidian(api_key=api_key, protocol=obsidian_protocol, host=obsidian_host, port=obsidian_port)
+        result = api.get_active_note()
+        
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(result, indent=2)
             )
         ]

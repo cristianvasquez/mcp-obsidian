@@ -283,3 +283,51 @@ class Obsidian():
             return None
             
         return self._safe_call(call_fn)
+    
+    def list_commands(self) -> Any:
+        """Get a list of all available commands in Obsidian.
+        
+        Returns:
+            Dict containing list of commands with id and name
+        """
+        url = f"{self.get_base_url()}/commands/"
+        
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        
+        return self._safe_call(call_fn)
+    
+    def execute_command(self, command_id: str) -> Any:
+        """Execute a specific Obsidian command by its ID.
+        
+        Args:
+            command_id: The ID of the command to execute
+            
+        Returns:
+            None on success
+        """
+        url = f"{self.get_base_url()}/commands/{command_id}/"
+        
+        def call_fn():
+            response = requests.post(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return None
+        
+        return self._safe_call(call_fn)
+    
+    def get_active_note(self) -> Any:
+        """Get the currently active note in Obsidian.
+        
+        Returns:
+            Dict containing active note information
+        """
+        url = f"{self.get_base_url()}/active/"
+        
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        
+        return self._safe_call(call_fn)
